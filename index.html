@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>USA Electric Power Plants</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css" />
+  <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+  
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Lora" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: whitesmoke;
+      font-family: Lato, sans-serif;
+      color: #0D0000;
+    }
+
+    header {
+      padding: 6px 10%;
+    }
+
+		h1 {
+			position: absolute;
+			margin-top: 0;
+			top: 10px;
+			left: 32%;
+			font-size: 2em;
+			font-family: "Lora", serif;
+			letter-spacing: .04em;
+			padding: 10px 15px;
+			background: rgba(256, 256, 256, .4);
+			border: 1px solid grey;
+			border-radius: 10px;
+			z-index: 800;
+		}    
+
+    h2 {
+      display: inline-block;
+      color: #001323;
+    }
+  
+    #map {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+		}
+
+		#about {
+			position: absolute;
+			bottom: 20px;
+			right: 10px;
+			width: 320px;
+			padding: 0 15px;
+			background: rgba(256, 256, 256, .4);
+			border: 2px solid gray;
+			border-radius: 10px;
+			z-index: 400;
+		}    
+    
+    footer {
+      padding: 6px 10%;
+      width: 80%;
+    }
+ 
+    c1 {
+      color: #364c91;
+    }
+    c2 {
+      color: #f4dc34;
+    }
+    c3 {
+      color: #18675e;
+    }
+
+		a {
+			color: #001daa;
+			text-decoration: none;
+		}
+
+		a:hover {
+			text-decoration: underline;
+		}
+    
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>US Detailed Electric Power Plants</h1>
+    <h2>Map Subtitle</h2>
+  </header>
+
+  <div id='map'></div>
+
+  <section id="about">
+		<h2>about this map</h2>
+		<p>This map give information about some alternatives energy (<c1>Hydro </c1>,<c2>  Solar</c2> and <c3> Biomass </c3>)  consumend in the United States. Find here additional information about <a href="https://www.eia.gov/">power plants and energy</a> in the USA. </p>
+		<p>Map authored by me, Etienne Sambo</p>
+	</section>
+  
+  <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"></script>
+  <script src="data/power-plants.js"></script>
+  <script>
+    var map = L.map('map', {
+      center: [38, -94],
+      zoom: 5,
+    });
+
+    var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    });
+    tiles.addTo(map);
+      
+    // Sorting the data values high to low,
+    // Leaflet draws the larger ones first and the smaller ones on top of them
+    plants.features.sort(function(a, b) {
+      return b.properties.capacity_mw - a.properties.capacity_mw;
+    });   
+  
+    console.log(plants);
+
+    //Commonstyle for all layers
+    var commonStyles = {
+     weight: 1,
+     stroke: 1,
+     fillOpacity: .8
+    }
+    
+    //Layer of Hydroelectrisch energy:
+    var hydroLayer = L.geoJson(plants, {
+          pointToLayer: function(feature,latlng) {
+          return L.circleMarker(latlng, commonStyles);
+        },
+      
+        filter: function(feature) {
+          if(feature.properties.fuel_source.Hydro) {
+             return feature;
+          }
+        },
+      
+        onEachFeature: function(feature, layer) {
+
+          var name =  layer.feature.properties.plant_name;
+          var capacity =  layer.feature.properties.capacity_mw;
+          
+
+          for(var typeSource in layer.feature.properties.fuel_source) { 
+              // access value for specific fuel sources here
+              var fuelCapacity =  layer.feature.properties.fuel_source[typeSource];       
+              // use that value to update the tooltip info  
+              var myToolTip = "<h2>" + name + "<br> Plant Capacity: " + capacity + " MW" + "<br>" + typeSource +": " + fuelCapacity+ " MW</h2>"; 
+          }
+          
+          layer.on('mouseover', function() {
+            layer.setStyle({
+              fillColor: 'red'
+            });
+          });
+          layer.on('mouseout', function() {
+            layer.setStyle({
+              fillColor: '#364c91',
+            });
+          });       
+          layer.bindTooltip(myToolTip);
+        }, 
+
+        style: function(feature) {
+          return {
+            color: '#364c91',
+            fillColor: '#364c91',
+            radius: getRadius(feature.properties.fuel_source.Hydro)
+          }
+        }
+    }).addTo(map);
+    
+    // Here follow tree block of code that describe practicaly the same,
+    // the only different are the type of power address.
+    // First we filter the data to control the visibility of the features.
+    // Then we used the "onEachFeature" to called each feature and attach a popup text, 
+    // before adding it to the layer. Next we add some mouseevent for user interaction,
+    // and style the features and finaly add to the map.
+    
+    // Layer of Solar energy:
+    var solarLayer = L.geoJson(plants, {
+          pointToLayer: function(feature,latlng) {
+          return L.circleMarker(latlng, commonStyles);
+        },
+      
+        filter: function(feature) {
+          if(feature.properties.fuel_source.Solar) {
+              return feature;
+          }
+        },
+      
+        onEachFeature: function(feature, layer) {
+
+          var a =  layer.feature.properties.plant_name;
+          var b =  layer.feature.properties.capacity_mw;
+          var c =  layer.feature.properties.fuel_source.Solar;
+
+          for(var typeSource in layer.feature.properties.fuel_source )
+              {          
+                var myToolTip = "<h2>" +a+ "<br> Plant Capacity: " +b+ " MW" + "<br>"+typeSource+": " +c+ " MW</h2>"; 
+              }
+      //console.log(layer.feature.properties.fuel_source)      
+
+          layer.on('mouseover', function() {
+            layer.setStyle({
+              fillColor: 'red'
+            });
+          });
+          layer.on('mouseout', function() {
+            layer.setStyle({
+              fillColor: '#f4dc34'
+            });
+          });       
+          layer.bindTooltip(myToolTip);
+        }, 
+
+        style: function(feature) {
+          return {
+            color: '#f4dc34',
+            fillColor: '#f4dc34',
+            radius: getRadius(feature.properties.fuel_source.Solar)
+          }
+        }
+    }).addTo(map);
+    
+    //Layer of Biomass energy:
+     var  biomassLayer = L.geoJson(plants, {
+              pointToLayer: function(feature,latlng) {
+              return L.circleMarker(latlng, commonStyles);
+          },
+      
+          filter: function(feature) {
+            if(feature.properties.fuel_source.Biomass) {
+                return feature;
+            }
+          },       
+       
+          onEachFeature: function(feature, layer) {
+
+            var a =  layer.feature.properties.plant_name;
+            var b =  layer.feature.properties.capacity_mw;
+            var c =  layer.feature.properties.fuel_source.Biomass;
+
+            for(var typeSource in layer.feature.properties.fuel_source )
+              {          
+                var myToolTip = "<h2>" +a+ "<br> Plant Capacity: " +b+ " MW" + "<br>"+typeSource+": " +c+ " MW</h2>"; 
+              }
+
+            layer.on('mouseover', function() {
+              layer.setStyle({
+                fillColor: 'red'
+              });
+            });
+            layer.on('mouseout', function() {
+              layer.setStyle({
+                fillColor: '#18675e'
+              });
+            });       
+            layer.bindTooltip(myToolTip);
+          }, 
+
+          style: function(feature) {
+            return {
+              color: '#18675e',
+              fillColor: '#18675e',
+              radius: getRadius(feature.properties.fuel_source.Biomass)
+            }
+          }
+    }).addTo(map);
+  
+    function getRadius(area) {
+      var radius = Math.sqrt(area/Math.PI);
+      return radius * .8;
+    }
+    
+  </script>
+
+</body>
+
+</html>
